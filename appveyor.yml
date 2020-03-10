@@ -1,48 +1,75 @@
 clone_depth: 1
-
+#init:
+#  - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 #init:
 #    - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
+build:
+    verbosity: detailed
+
 environment:
+    APPVEYOR_SSH_BLOCK: true
+    APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDSze4wNnzYxqjaTbdk5y7lvwSD50nXDOcKrIHgTmqZtKQ7T/iw7RPgbFDwWK2dLt3sctEtjoRrxvjI+wX0auMgbLA2U0s9z91C7ANodqig/LgnTxwpvJQt4rhz7cHsL+10/wcLNAg77ybE3Ok4RFSTtYVqzXdWhydq2i9UWh1z9PtGUw/2UYClzP3VsJi1ZXPsU3bAnnEGGiAJRQYGbd1ZD9W4BLrKAo4DpKNXZtfDRaxlCn7+bcx8Zo3wnoS0nwyjNiHXO6jN3SFxEdiCiRdLWm49GbRY5Om/pRhlsdrHYEc6qy2sx7a85RxQe6dkim+vj5ie2GluhMuJWRdmCAZf appveyor
     BUILD_NO: $(APPVEYOR_BUILD_NUMBER)
     BRANCH: $(APPVEYOR_REPO_BRANCH)
     REPO: $(APPVEYOR_REPO_NAME)
     matrix:
-        - MINGW_VERSION: mingw64
-          ARCH: x86_64
-          ARCH_BIT: 64
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-          BUILD_DEPS_CMD: "C:\\msys64\\usr\\bin\\bash CI\\appveyor\\build_appveyor_mingw.sh"
-          DEPLOY_FILE: "C:\\scopy-%ARCH_BIT%-setup.exe"
-
-        - MINGW_VERSION: mingw32
-          ARCH: i686
-          ARCH_BIT: 32
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-          BUILD_DEPS_CMD: "C:\\msys64\\usr\\bin\\bash CI\\appveyor\\build_appveyor_mingw.sh"
-          DEPLOY_FILE: "C:\\scopy-%ARCH_BIT%-setup.exe"
-
         - ARCH: x86_64
           ARCH_BIT: 64
-          APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
-          BUILD_DEPS_CMD: "/home/appveyor/projects/scopy/CI/appveyor/install_ubuntu_deps.sh"
-          BUILD_CMD: "/home/appveyor/projects/scopy/CI/appveyor/build_appveyor_ubuntu.sh"
-          DEPLOY_FILE: ""
-
+          APPVEYOR_BUILD_WORKER_IMAGE: macos
+          BUILD_DEPS_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/install_macos_deps.sh"
+          BUILD_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/build_appveyor_macos.sh"
+          PACKAGE_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/package_darwin.sh"
+          DEPLOY_FILE: "/Users/appveyor/projects/scopy/build/Scopy.dmg"
+          C_COMPILER: -DCMAKE_C_COMPILER=/usr/bin/gcc
+          CXX_COMPILER: -DCMAKE_CXX_COMPILER=/usr/bin/g++
         - ARCH: x86_64
           ARCH_BIT: 64
-          APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
-          BUILD_DEPS_CMD: "/home/appveyor/projects/scopy/CI/appveyor/build_appveyor_flatpak.sh $BRANCH $REPO"
-          BUILD_CMD: ""
-          DEPLOY_FILE: "/home/appveyor/projects/scopy/Scopy.flatpak"
-         
+          APPVEYOR_BUILD_WORKER_IMAGE: macos-mojave
+          BUILD_DEPS_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/install_macos_deps.sh"
+          BUILD_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/build_appveyor_macos.sh"
+          PACKAGE_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/package_darwin.sh"
+          DEPLOY_FILE: "/Users/appveyor/projects/scopy/build/Scopy.dmg"
+          C_COMPILER: -DCMAKE_C_COMPILER=/usr/bin/gcc
+          CXX_COMPILER: -DCMAKE_CXX_COMPILER=/usr/bin/g++
+
+#        - MINGW_VERSION: mingw64
+#          ARCH: x86_64
+#          ARCH_BIT: 64
+#          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+#          BUILD_DEPS_CMD: "C:\\msys64\\usr\\bin\\bash CI\\appveyor\\build_appveyor_mingw.sh"
+#          DEPLOY_FILE: "C:\\scopy-%ARCH_BIT%-setup.exe"
+
+#        - MINGW_VERSION: mingw32
+#          ARCH: i686
+#          ARCH_BIT: 32
+#          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+#          BUILD_DEPS_CMD: "C:\\msys64\\usr\\bin\\bash CI\\appveyor\\build_appveyor_mingw.sh"
+#          DEPLOY_FILE: "C:\\scopy-%ARCH_BIT%-setup.exe"
+
+#        - ARCH: x86_64
+#          ARCH_BIT: 64
+#          APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+#          BUILD_DEPS_CMD: "/home/appveyor/projects/scopy/CI/appveyor/install_ubuntu_deps.sh"
+#          BUILD_CMD: "/home/appveyor/projects/scopy/CI/appveyor/build_appveyor_ubuntu.sh"
+#          PACKAGE_CMD: ""
+#          DEPLOY_FILE: ""
+
+#        - ARCH: x86_64
+#          ARCH_BIT: 64
+#          APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+#          BUILD_DEPS_CMD: "/home/appveyor/projects/scopy/CI/appveyor/build_appveyor_flatpak.sh $BRANCH $REPO"
+#          BUILD_CMD: ""
+#          PACKAGE_CMD: ""
+#          DEPLOY_FILE: "/home/appveyor/projects/scopy/Scopy.flatpak"
+
+
 matrix:
     fast_finish: true
 
 install:
     # Install Inno Setup
     - cmd: choco install InnoSetup
-    - sh: docker version
 
 build_script:
     - cmd: C:\msys64\usr\bin\bash -lc "pacman --noconfirm -U http://repo.msys2.org/msys/x86_64/pacman-5.2.1-6-x86_64.pkg.tar.xz"
@@ -50,9 +77,12 @@ build_script:
     - cmd: set PATH=%PATH%;"C:\Program Files (x86)\Inno Setup 5"
     - cmd: "%BUILD_DEPS_CMD%"
 
+#    - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
     - sh: echo $BUILD_DEPS_CMD
     - sh: $BUILD_DEPS_CMD
     - sh: $BUILD_CMD
+    - sh: $PACKAGE_CMD
+#    - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 
     - echo "### Push artifacts ... "
     - cmd: appveyor PushArtifact c:\scopy-%ARCH_BIT%bit.zip
@@ -61,5 +91,8 @@ build_script:
     - cmd: appveyor PushArtifact %DEPLOY_FILE%
     - sh: if [[ $DEPLOY_FILE != "" ]]; then appveyor PushArtifact $DEPLOY_FILE; fi
 
+on_finish:
+  - sh: export APPVEYOR_SSH_BLOCK=true
+  - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 #on_finish:
 #    - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

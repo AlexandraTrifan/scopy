@@ -1,14 +1,23 @@
 #!/bin/bash
 set -e
 
-#source ./CI/travis/lib.sh
+
+NUM_JOBS=4
+APPVEYOR=true
+if [ "$APPVEYOR" == "true" ] ; then
+	STAGINGDIR=/usr/local
+else
+	STAGINGDIR="${WORKDIR}/staging"
+fi
+
+export PYTHON3=python3
 
 __cmake() {
 	local args="$1"
 	mkdir -p build
 	pushd build # build
 
-	if [ "$TRAVIS" == "true" ] ; then
+	if [ "$APPVEYOR" == "true" ] ; then
 		cmake $args ..
 		make -j${NUM_JOBS}
 		sudo make install
@@ -25,7 +34,7 @@ __cmake() {
 
 __make() {
 	$preconfigure
-	if [ "$TRAVIS" == "true" ] ; then
+	if [ "$APPVEYOR" == "true" ] ; then
 		$configure
 		$make -j${NUM_JOBS}
 		sudo $make install
@@ -37,7 +46,7 @@ __make() {
 }
 
 __qmake() {
-	if [ "$TRAVIS" == "true" ] ; then
+	if [ "$APPVEYOR" == "true" ] ; then
 		$QMAKE $qtarget
 		make -j${NUM_JOBS}
 		sudo make install
