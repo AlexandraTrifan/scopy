@@ -5,6 +5,8 @@ clone_depth: 1
 
 environment:
     BUILD_NO: $(appveyor_build_number)
+    BRANCH: $(APPVEYOR_REPO_BRANCH)
+    REPO: $(APPVEYOR_REPO_NAME)
     matrix:
 #        - MINGW_VERSION: mingw64
 #  ARCH: x86_64
@@ -25,8 +27,11 @@ matrix:
 install:
     # Install Inno Setup
     - cmd: choco install InnoSetup
+    - docker version
 
 build_script:
+    - sh: /home/appveyor/projects/scopy/CI/appveyor/build_flatpak.sh $BRANCH $REPO
+    - appveyor PushArtifact /home/appveyor/projects/scopy/Scopy.flatpak
     - cmd: set PATH=%PATH%;"C:\Program Files (x86)\Inno Setup 5"
     - cmd: C:\msys64\usr\bin\bash build_appveyor_mingw.sh
     - sh: /home/appveyor/projects/scopy/install_deps.sh
@@ -36,6 +41,6 @@ build_script:
     - appveyor PushArtifact C:\debug-%ARCH_BIT%bit.zip
    
     # Build the installer
-    - appveyor PushArtifact C:\scopy-%ARCH_BIT%-setup.exe
+    #- appveyor PushArtifact C:\scopy-%ARCH_BIT%-setup.exe
 #on_finish:
 #    - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
