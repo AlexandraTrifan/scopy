@@ -1,0 +1,23 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  make-flatpak:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Pull the Docker Image
+      run: docker pull alexandratr/scopy-flatpak-bionic:latest
+    - name: Run Docker Image
+      run: |
+            docker run --privileged \
+                --workdir /github/workspace \
+                -v `pwd`:$GITHUB_WORKSPACE:rw \
+		            -e "BRANCH=master" -e "REPO=AlexandraTrifan/scopy" alexandratr/scopy-flatpak-bionic:latest /bin/bash -xe $GITHUB_WORKSPACE/CI/appveyor/inside_flatpak_docker.sh
