@@ -38,6 +38,7 @@
 
 #include <QWidget>
 #include <QQueue>
+#include <QTimer>
 
 /* libm2k includes */
 #include <libm2k/analog/genericanalogin.hpp>
@@ -102,6 +103,7 @@ public:
 
 	void setNativeDialogs(bool nativeDialogs) override;
 
+	void setCurrentAverageIndexLabel(uint chnIdx);
 public Q_SLOTS:
 	void readPreferences();	
 	void run() override;
@@ -112,6 +114,8 @@ Q_SIGNALS:
 	void showTool();
 
 private Q_SLOTS:
+	void on_btnHistory_toggled(bool checked);
+	void onCurrentAverageIndexChanged(uint chnIdx, uint avgIdx);
 	void on_btnToolSettings_toggled(bool checked);
 	void on_btnSettings_clicked(bool checked);
 	void on_btnSweep_toggled(bool checked);
@@ -148,6 +152,8 @@ private Q_SLOTS:
 	void on_btnBrowseFile_clicked();
 	void on_btnImport_clicked();
 	void onReferenceChannelDeleted();
+	void refreshCurrentSampleLabel();
+	void validateSpinboxAveraging();
 
 private:
 	void build_gnuradio_block_chain();
@@ -202,6 +208,8 @@ private:
 	StartStopRangeWidget *startStopRange;
 
 	QList<channel_sptr> channels;
+	QTimer *sample_timer;
+	std::chrono::time_point<std::chrono::system_clock>  m_time_start;
 
 	adiscope::scope_sink_f::sptr fft_sink;
 	iio_manager::port_id *fft_ids;
@@ -237,6 +245,9 @@ private:
 	ChannelWidget *getChannelWidgetAt(unsigned int id);
 	void updateMarkerMenu(unsigned int id);
 	bool isIioManagerStarted() const;
+	void setCurrentSampleLabel(double);
+
+	bool canSwitchAverageHistory(FftDisplayPlot::AverageType avg_type);
 };
 
 class SpectrumChannel: public QObject
@@ -275,18 +286,26 @@ public:
 	uint averaging() const;
 	void setAveraging(uint);
 
+	uint averageIdx() const;
+	void setAverageIdx(uint);
+
 	FftDisplayPlot::AverageType averageType() const;
 	void setAverageType(FftDisplayPlot::AverageType);
 
 	SpectrumAnalyzer::FftWinType fftWindow() const;
 	void setFftWindow(SpectrumAnalyzer::FftWinType win, int taps);
 
+	bool isAverageHistoryEnabled() const;
+	void setAverageHistoryEnabled(bool enabled);
+	bool canStoreAverageHistory() const;
 private:
 	int m_id;
 	QString m_name;
 	float m_line_width;
 	QColor m_color;
 	uint m_averaging;
+	uint m_average_current_index;
+	bool m_average_history;
 	FftDisplayPlot::AverageType m_avg_type;
 	SpectrumAnalyzer::FftWinType m_fft_win;
 	FftDisplayPlot *m_plot;
@@ -296,7 +315,7 @@ private:
 	void scaletFftWindow(std::vector<float>& win, float gain);
 
 	static std::vector<float> build_win(SpectrumAnalyzer::FftWinType type,
-	                                    int ntaps);
+					    int ntaps);
 };
 } // namespace adiscope
 

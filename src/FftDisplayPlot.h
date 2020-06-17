@@ -71,6 +71,7 @@ namespace adiscope {
 			DBU = 2,
 			VPEAK = 3,
 			VRMS = 4,
+			VROOTHZ = 5
 		};
 
 		enum MarkerType {
@@ -106,6 +107,7 @@ namespace adiscope {
 
 		std::vector<enum AverageType> d_ch_average_type;
 		std::vector<average_sptr> d_ch_avg_obj;
+		std::vector<unsigned int> d_current_avg_index;
 
 		enum MagnitudeType d_presetMagType;
 		enum MagnitudeType d_magType;
@@ -133,7 +135,7 @@ namespace adiscope {
 			in_data, std::vector<double *> out_data,
 			uint64_t nb_points);
 		average_sptr getNewAvgObject(enum AverageType avg_type,
-			uint data_width, uint history);
+			uint data_width, uint history, bool history_en);
 
 		void add_marker(int chn);
 		void remove_marker(int chn, int which);
@@ -171,7 +173,7 @@ namespace adiscope {
 		enum AverageType averageType(uint chIdx) const;
 		uint averageHistory(uint chIdx) const;
 		void setAverage(uint chIdx, enum AverageType avg_type,
-			uint history);
+			uint history, bool history_en = true);
 		void resetAverageHistory();
 		void setStartStop(double start, double stop);
 		void setVisiblePeakSearch(bool enabled);
@@ -222,6 +224,7 @@ namespace adiscope {
 		void sampleCountUpdated(uint);
 		void newMarkerData();
 		void markerSelected(uint chIdx, uint mkIdx);
+		void currentAverageIndex(unsigned int chnIdx, unsigned int avgIdx);
 
 	public Q_SLOTS:
 		void setSampleRate(double sr, double units,

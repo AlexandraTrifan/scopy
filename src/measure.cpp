@@ -20,7 +20,6 @@
 
 #include "measure.h"
 #include <cmath>
-#include "adc_sample_conv.hpp"
 #include <qmath.h>
 #include <QDebug>
 

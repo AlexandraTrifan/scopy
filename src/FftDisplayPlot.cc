@@ -99,6 +99,7 @@ FftDisplayPlot::FftDisplayPlot(int nplots, QWidget *parent) :
 			QList<std::shared_ptr<marker_data>>());
 		d_freq_asc_sorted_peaks.push_back(
 			QList<std::shared_ptr<marker_data>>());
+		d_current_avg_index.push_back(0);
 	}
 	y_scale_factor.resize(nplots);
 	d_ch_avg_obj.resize(nplots);
@@ -393,8 +394,9 @@ void FftDisplayPlot::plotData(const std::vector<double *> &pts,
 				continue;
 
 			uint h = d_ch_avg_obj[i]->history();
+			bool h_en = d_ch_avg_obj[i]->historyEnabled();
 			d_ch_avg_obj[i] = getNewAvgObject(
-				d_ch_average_type[i], halfNumPoints, h);
+				d_ch_average_type[i], halfNumPoints, h, h_en);
 		}
 	}
 
@@ -410,6 +412,7 @@ void FftDisplayPlot::plotData(const std::vector<double *> &pts,
 		resetAverageHistory();
 	}
 
+//	qDebug() << "y_data size before avg computing " << y_original_data.size() <<  "   " << halfNumPoints << "\n";
 	averageDataAndComputeMagnitude(y_original_data, y_data, halfNumPoints);
 
 	_resetXAxisPoints();
@@ -479,6 +482,12 @@ void FftDisplayPlot::averageDataAndComputeMagnitude(std::vector<double *>
 	for (unsigned int i = 0; i < d_nplots; i++) {
 		bool needs_dB_avg = false;
 
+		d_current_avg_index[i] += 1;
+		if (averageHistory(i) > 0) {
+			d_current_avg_index[i] %= averageHistory(i);
+		}
+		Q_EMIT currentAverageIndex(i, d_current_avg_index[i]);
+
 		switch (d_ch_average_type[i]) {
 		case LINEAR_DB:
 		case EXPONENTIAL_DB:
@@ -521,6 +530,9 @@ void FftDisplayPlot::averageDataAndComputeMagnitude(std::vector<double *>
 			case VRMS:
 				out_data[i][s] = sqrt(source[i][s]) *
 					y_scale_factor[i] / sqrt(2) / nb_points;
+				break;
+			case VROOTHZ:
+				out_data[i][s] = sqrt(source[i][s]) * y_scale_factor[i] / nb_points;
 				break;
 			};
 		}
@@ -622,14 +634,23 @@ uint FftDisplayPlot::averageHistory(uint chIdx) const
 }
 
 void FftDisplayPlot::setAverage(uint chIdx, enum AverageType avg_type,
-	uint history)
+	uint history, bool history_en)
 {
 	if (chIdx >= d_ch_average_type.size()) {
 		return;
 	}
 
-	d_ch_average_type[chIdx] = avg_type;
-	d_ch_avg_obj[chIdx] = getNewAvgObject(avg_type, d_numPoints, history);
+
+	if (d_ch_avg_obj[chIdx] && (history != d_ch_avg_obj[chIdx]->history())
+			&& (history_en == d_ch_avg_obj[chIdx]->historyEnabled())) {
+		d_ch_avg_obj[chIdx]->setHistory(history);
+	} else {
+		d_ch_average_type[chIdx] = avg_type;
+		qDebug() << "CREATE\n";
+		d_ch_avg_obj[chIdx] = getNewAvgObject(avg_type, d_numPoints, history, history_en);
+		d_current_avg_index[chIdx] = 0;
+		Q_EMIT currentAverageIndex(chIdx, d_current_avg_index[chIdx]);
+	}
 }
 
 void FftDisplayPlot::resetAverageHistory()
@@ -637,10 +658,15 @@ void FftDisplayPlot::resetAverageHistory()
 	for (int i = 0; i < d_ch_avg_obj.size(); i++)
 		if (d_ch_avg_obj[i])
 			d_ch_avg_obj[i]->reset();
+
+	for (int i = 0; i < d_current_avg_index.size(); i++) {
+		d_current_avg_index[i] = 0;
+		Q_EMIT currentAverageIndex(i, d_current_avg_index[i]);
+	}
 }
 
 FftDisplayPlot::average_sptr FftDisplayPlot::getNewAvgObject(
-	enum AverageType avg_type, uint data_width, uint history)
+	enum AverageType avg_type, uint data_width, uint history, bool history_en)
 {
 	switch (avg_type) {
 		case SAMPLE:
@@ -658,11 +684,21 @@ FftDisplayPlot::average_sptr FftDisplayPlot::getNewAvgObject(
 			return boost::make_shared<MinHoldContinuous>(data_width,
 				history);
 		case LINEAR_RMS:
-			return boost::make_shared<LinearAverage>(data_width,
+		if (history_en) {
+			return boost::make_shared<LinearRMS>(data_width,
 				history);
+		} else {
+			return boost::make_shared<LinearRMSOne>(data_width,
+				history);
+		}
 		case LINEAR_DB:
+		if (history_en) {
 			return boost::make_shared<LinearAverage>(data_width,
 				history);
+		} else {
+			return boost::make_shared<LinearAverageOne>(data_width,
+				history);
+		}
 		case EXPONENTIAL_RMS:
 			return boost::make_shared<ExponentialAverage>(
 				data_width, history);
