@@ -3,7 +3,12 @@ clone_depth: 1
 #    - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 
+build:
+    verbosity: detailed
+
 environment:
+    APPVEYOR_SSH_BLOCK: true
+    APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDSze4wNnzYxqjaTbdk5y7lvwSD50nXDOcKrIHgTmqZtKQ7T/iw7RPgbFDwWK2dLt3sctEtjoRrxvjI+wX0auMgbLA2U0s9z91C7ANodqig/LgnTxwpvJQt4rhz7cHsL+10/wcLNAg77ybE3Ok4RFSTtYVqzXdWhydq2i9UWh1z9PtGUw/2UYClzP3VsJi1ZXPsU3bAnnEGGiAJRQYGbd1ZD9W4BLrKAo4DpKNXZtfDRaxlCn7+bcx8Zo3wnoS0nwyjNiHXO6jN3SFxEdiCiRdLWm49GbRY5Om/pRhlsdrHYEc6qy2sx7a85RxQe6dkim+vj5ie2GluhMuJWRdmCAZf appveyor
     BUILD_NO: $(APPVEYOR_BUILD_NUMBER)
     BRANCH: $(APPVEYOR_REPO_BRANCH)
     REPO: $(APPVEYOR_REPO_NAME)
@@ -73,6 +78,7 @@ build_script:
     - cmd: "%BUILD_DEPS_CMD%"
 
     - sh: echo $BUILD_DEPS_CMD
+#    - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
     - sh: $BUILD_DEPS_CMD
     - sh: $BUILD_CMD
     - sh: $PACKAGE_CMD
@@ -84,5 +90,8 @@ build_script:
     - cmd: appveyor PushArtifact %DEPLOY_FILE%
     - sh: if [[ $DEPLOY_FILE != "" ]]; then appveyor PushArtifact $DEPLOY_FILE; fi
 
+on_finish:
+  - sh: export APPVEYOR_SSH_BLOCK=true
+  - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 #on_finish:
 #    - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

@@ -65,7 +65,7 @@
 #include "extendingplotzoomer.h"
 #include "printableplot.h"
 
-#if QWT_VERSION >= 0x060000
+#if QWT_VERSION < 0x060400
 #include <qwt_compat.h>
 #endif
 
