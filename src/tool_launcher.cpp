@@ -666,12 +666,17 @@ void ToolLauncher::forgetDeviceBtn_clicked(QString uri)
 QPushButton *ToolLauncher::addContext(const QString& uri)
 {
 	auto tempCtx = iio_create_context_from_uri(uri.toStdString().c_str());
-	if (!tempCtx)
+	printf("TL: temp_ctx is not nullptr\n");
+	if (!tempCtx) {
+		printf("TL: temp_ctx is nullptr\n");
 		return nullptr;
+	}
 
 	auto tempFilter = new Filter(tempCtx);
-	if (!tempFilter)
+	if (!tempFilter) {
+		printf("TL: temp_filter is nullptr\n");
 		return nullptr;
+	}
 
 	DeviceWidget *deviceWidget = nullptr;
 	if (tempFilter->hw_name().compare("M2K") == 0) {
@@ -689,8 +694,11 @@ QPushButton *ToolLauncher::addContext(const QString& uri)
 	auto connectBtn = deviceWidget->connectButton();
 
 	if (connectBtn) {
+		printf("TL: connectBtn is Connected to slot\n");
 		connect(connectBtn, SIGNAL(clicked(bool)),
 			this, SLOT(connectBtn_clicked(bool)));
+	} else {
+		printf("TL: connectBtn is nullptr\n");
 	}
 
 	connect(deviceWidget, SIGNAL(forgetDevice(QString)),
@@ -1054,6 +1062,7 @@ void adiscope::ToolLauncher::connectBtn_clicked(bool pressed)
 	} else {
 		selectedDev->connectButton()->setText(tr("Disconnecting..."));
 	}
+	printf("TL: connectBtn_clicked\n");
 	QApplication::processEvents();
 
 	/* Disconnect connected device, if any */
@@ -1070,6 +1079,7 @@ void adiscope::ToolLauncher::connectBtn_clicked(bool pressed)
 	if (connectedDev != selectedDev) {
 		/* Connect to the selected device, if any */
 		if (selectedDev) {
+			printf("TL: connecting to selected device \n");
 			QString uri = selectedDev->uri();
 			selectedDev->infoPage()->identifyDevice(false);
 			bool success = switchContext(uri);
