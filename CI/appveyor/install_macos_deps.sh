@@ -24,7 +24,11 @@ cd ~
 WORKDIR=${PWD}
 NUM_JOBS=4
 
-brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/8846805afc0cb8e5d114d5e222af1de3b35289df/Formula/qt.rb
+
+sudo xcode-select --switch /Applications/Xcode.app
+brew tap alexandratrifan/repo
+brew install alexandratrifan/repo/qt
+#brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/8846805afc0cb8e5d114d5e222af1de3b35289df/Formula/qt.rb
 export PATH="/usr/local/opt/qt/bin:$PATH"
 
 brew_install_or_upgrade() {
