@@ -16,7 +16,7 @@ BOOST_VERSION_FILE=1_65_1
 BOOST_VERSION=1.65.1
 
 PYTHON="python3"
-PACKAGES="pkg-config cmake fftw bison gettext autoconf automake libtool libzip glib libusb $PYTHON"
+PACKAGES=" qt pkg-config cmake fftw bison gettext autoconf automake libtool libzip glib libusb $PYTHON"
 PACKAGES="$PACKAGES glibmm doxygen wget gnu-sed libmatio dylibbundler libxml2"
 
 set -e
@@ -24,8 +24,9 @@ cd ~
 WORKDIR=${PWD}
 NUM_JOBS=4
 
-brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/8846805afc0cb8e5d114d5e222af1de3b35289df/Formula/qt.rb
-export PATH="/usr/local/opt/qt/bin:$PATH"
+
+#brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/8846805afc0cb8e5d114d5e222af1de3b35289df/Formula/qt.rb
+#export PATH="/usr/local/opt/qt5/bin:$PATH"
 
 brew_install_or_upgrade() {
 	brew install $1 || \
@@ -46,12 +47,17 @@ for pkg in gcc bison gettext cmake python; do
 	brew link --overwrite --force $pkg
 done
 
+#cmake -P ./projects/scopy/CI/appveyor/install_macos_qt.sh
+#export PATH="/Users/appveyor/qt5/5.14.2/clang_64/bin:$PATH"
+#ls /Users/appveyor
+
 pip3 install mako six
 
 pwd
 source ./projects/scopy/CI/appveyor/before_install_lib.sh
 
 QT_PATH="$(brew --prefix qt)/bin"
+#QT_PATH="/qt5/5.14.2/clang_64/bin"
 export PATH="/usr/local/bin:$PATH"
 export PATH="/usr/local/opt/bison/bin:$PATH"
 export PATH="${QT_PATH}:$PATH"
@@ -59,7 +65,11 @@ export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libzip/lib/pkgconfig"
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libffi/lib/pkgconfig"
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/glibmm/lib/pkgconfig"
 
-QMAKE="$(command -v qmake)"
+#QMAKE="$QT_PATH/qmake"
+QMAKE="$QT_PATH/qmake"
+
+#ls /Users/appveyor/qt5/5.14.2/clang_64/
+#ls /Users/appveyor/qt5/5.14.2/clang_64/bin
 
 CMAKE_OPTS="-DCMAKE_PREFIX_PATH=$STAGINGDIR -DCMAKE_INSTALL_PREFIX=$STAGINGDIR"
 
