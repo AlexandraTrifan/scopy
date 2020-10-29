@@ -43,6 +43,11 @@ for pkg in gcc bison gettext cmake python; do
 	brew link --overwrite --force $pkg
 done
 
+#export LDFLAGS="-L/usr/local/opt/python@3.8/lib"
+#export PKG_CONFIG_PATH="/usr/local/opt/python@3.8/lib/pkgconfig"
+#export PATH="/usr/local/opt/python@3.8/bin:$PATH"
+#python3 --version
+
 pip3 install mako six
 
 pwd
@@ -167,6 +172,9 @@ build_gnuradio() {
 	make $JOBS
 	sudo make install
 }
+
+#-DPYTHON_EXECUTABLE=/usr/local/opt/python@3.8/bin/python3 \
+#-DPYTHON_LIBRARIES=/usr/local/opt/python@3.8/lib/libpython3.8.dylib \
 
 build_griio() {
 	echo "### Building gr-iio - branch $GRIIO_BRANCH"
