@@ -1,14 +1,28 @@
 clone_depth: 1
+init:
+  - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 #init:
 #    - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 image: Visual Studio 2019
 
 environment:
+    APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDUjnXIiuC2nFM++yu0SWaFxPJNYwj66Rp2qSWyAm3OAgCex/pCSEtAWqjXBcFysBTLBmQozKP+a2osTvlgvqwQzCvrtklpghBuz/5mc87D8UiI8bP8UAXK/mzzuFeBZzTf3KnUEjNvSB16yxyBdxQQ/3UYUIvNrPmqH2+ITh3qlDjTLArj41L9odeHTGieWb0rG+5zU1qmxLNV7GBnHaW4uPHF0Bly4YWslunHIdgHJ6afN0CbeaXPGmkPfwNHtI32NcrjYsJAYg8FwLlHe1A5B/0tpApKPASgcUbD+OaPOIIryEVHqF3Qt5ldlNBSZta3w+CxcmMoHsPG70G3ouoR
+    APPVEYOR_SSH_BLOCK: false
     BUILD_NO: $(APPVEYOR_BUILD_NUMBER)
     BRANCH: $(APPVEYOR_REPO_BRANCH)
     REPO: $(APPVEYOR_REPO_NAME)
     matrix:
+        - ARCH: x86_64
+          ARCH_BIT: 64
+          APPVEYOR_BUILD_WORKER_IMAGE: macos
+          BUILD_DEPS_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/install_macos_deps.sh"
+          BUILD_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/build_appveyor_macos.sh"
+          PACKAGE_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/package_darwin.sh"
+          DEPLOY_FILE: "/Users/appveyor/projects/scopy/build/Scopy.dmg"
+          C_COMPILER: -DCMAKE_C_COMPILER=/usr/bin/gcc
+          CXX_COMPILER: -DCMAKE_CXX_COMPILER=/usr/bin/g++
+          QT_FORMULAE: "qt@5"
         - MINGW_VERSION: mingw64
           ARCH: x86_64
           ARCH_BIT: 64
@@ -22,17 +36,6 @@ environment:
           APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
           BUILD_DEPS_CMD: "C:\\msys64\\usr\\bin\\bash CI\\appveyor\\build_appveyor_mingw.sh"
           DEPLOY_FILE: "C:\\scopy-%ARCH_BIT%-setup.exe"
-
-        - ARCH: x86_64
-          ARCH_BIT: 64
-          APPVEYOR_BUILD_WORKER_IMAGE: macos
-          BUILD_DEPS_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/install_macos_deps.sh"
-          BUILD_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/build_appveyor_macos.sh"
-          PACKAGE_CMD: "/Users/appveyor/projects/scopy/CI/appveyor/package_darwin.sh"
-          DEPLOY_FILE: "/Users/appveyor/projects/scopy/build/Scopy.dmg"
-          C_COMPILER: -DCMAKE_C_COMPILER=/usr/bin/gcc
-          CXX_COMPILER: -DCMAKE_CXX_COMPILER=/usr/bin/g++
-          QT_FORMULAE: "qt5"
 
         - ARCH: x86_64
           ARCH_BIT: 64
@@ -81,3 +84,5 @@ build_script:
 
 #on_finish:
 #    - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+on_finish:
+  - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
