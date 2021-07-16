@@ -27,29 +27,40 @@
 #include <QTimer>
 
 using namespace adiscope;
+using namespace scopy::core;
 
-DeviceWidget::DeviceWidget(QString uri, QString name,
-			   ToolLauncher *parent) :
-	QWidget(parent),
-	m_ui(new Ui::Device()),
-	m_connected(false),
-	m_selected(false)
+DeviceWidget::DeviceWidget(std::string uri, PluginInterface *plugin,
+			   QWidget *parent)
+	: m_ui(new Ui::Device)
+	, m_connected(false)
+	, m_selected(false)
+	, m_plugin(plugin)
 {
 	m_ui->setupUi(this);
 	m_uri = uri;
-	m_ui->description->setText(uri);
-	m_ui->name->setText(name);
+	connect(this, &DeviceWidget::nameChanged, this, &DeviceWidget::refreshName);
+	connect(this, &DeviceWidget::iconChanged, this, &DeviceWidget::refreshIcon);
 
-	if (name.compare("M2K") != 0) {
-		m_infoPage = InfoPageBuilder::newPage(InfoPageBuilder::GENERIC,
-						      m_uri,
-						      parent->getPrefPanel(),
-						      parent->getPhoneHome());
-		connect(m_infoPage->forgetDeviceButton(), SIGNAL(clicked(bool)),
-			this, SLOT(forgetDevice_clicked(bool)));
-		connect(m_infoPage->identifyDeviceButton(), SIGNAL(clicked(bool)),
-			this, SLOT(identifyDevice_clicked(bool)));
-	}
+	setName(plugin->getName());
+	setIcon(plugin->getIcon());
+	m_ui->description->setText(QString::fromStdString(uri));
+
+//	m_infoPage = new InfoPage(uri, plugin->getExtraControls(), plugin->getInfoWidget());
+//	connect(m_infoPage->connectButton(), &QPushButton::clicked, this, &DeviceWidget::connected);
+
+//	m_ui->description->setText(uri);
+//	m_ui->name->setText(name);
+
+//	if (name.compare("M2K") != 0) {
+//		m_infoPage = InfoPageBuilder::newPage(InfoPageBuilder::GENERIC,
+//						      m_uri,
+//						      parent->getPrefPanel(),
+//						      parent->getPhoneHome());
+//		connect(m_infoPage->forgetDeviceButton(), SIGNAL(clicked(bool)),
+//			this, SLOT(forgetDevice_clicked(bool)));
+//		connect(m_infoPage->identifyDeviceButton(), SIGNAL(clicked(bool)),
+//			this, SLOT(identifyDevice_clicked(bool)));
+//	}
 }
 
 DeviceWidget::~DeviceWidget()
@@ -58,10 +69,10 @@ DeviceWidget::~DeviceWidget()
 	delete m_ui;
 }
 
-void DeviceWidget::identifyDevice_clicked(bool pressed)
-{
-	Q_EMIT identifyDevice(m_uri);
-}
+//void DeviceWidget::identifyDevice_clicked(bool pressed)
+//{
+//	Q_EMIT identifyDevice(m_uri);
+//}
 
 void DeviceWidget::forgetDevice_clicked(bool pressed)
 {
@@ -83,9 +94,9 @@ QPushButton* DeviceWidget::connectButton() const
 
 QPushButton* DeviceWidget::calibrateButton() const
 {
-	if (m_infoPage) {
-		return m_infoPage->calibrateButton();
-	}
+//	if (m_infoPage) {
+//		return m_infoPage->calibrateButton();
+//	}
 	return nullptr;
 }
 
@@ -95,9 +106,9 @@ void DeviceWidget::on_btn_toggled(bool toggled)
 	m_selected = toggled;
 	setDynamicProperty(m_ui->widget, "selected",
 			   toggled);
-	if (toggled) {
-		m_infoPage->getDeviceInfo();
-	}
+//	if (toggled) {
+//		m_infoPage->getDeviceInfo();
+//	}
 }
 
 bool DeviceWidget::connected() const
@@ -129,12 +140,12 @@ void DeviceWidget::setInfoPage(InfoPage *infoPage)
 	m_infoPage = infoPage;
 }
 
-QString DeviceWidget::uri() const
+std::string DeviceWidget::uri() const
 {
 	return m_uri;
 }
 
-void DeviceWidget::setUri(const QString &uri)
+void DeviceWidget::setUri(const std::string &uri)
 {
 	m_uri = uri;
 }
@@ -172,28 +183,30 @@ void DeviceWidget::click()
 	m_ui->btn->click();
 }
 
-void DeviceWidget::setName(QString name)
+void DeviceWidget::setName(std::string name)
 {
-	m_ui->name->setText(name);
+	m_name = name;
+	Q_EMIT nameChanged();
 }
 
-M2kDeviceWidget::M2kDeviceWidget(QString uri, QString name, ToolLauncher *parent) :
-	DeviceWidget(uri, name, parent)
+void DeviceWidget::setIcon(QIcon icon)
 {
-	m_ui->name->setText(tr("M2K"));
-	m_infoPage = InfoPageBuilder::newPage(InfoPageBuilder::M2K,
-					      m_uri,
-					      parent->getPrefPanel(),
-					      parent->getPhoneHome(),
-					      nullptr);
-
-	connect(m_infoPage->forgetDeviceButton(), SIGNAL(clicked(bool)),
-		this, SLOT(forgetDevice_clicked(bool)));
-	connect(m_infoPage->identifyDeviceButton(), SIGNAL(clicked(bool)),
-		this, SLOT(identifyDevice_clicked(bool)));
+	m_icon = icon;
+	Q_EMIT iconChanged();
 }
 
-
-M2kDeviceWidget::~M2kDeviceWidget()
+PluginInterface *DeviceWidget::plugin() const
 {
+	return m_plugin;
 }
+
+void DeviceWidget::refreshName()
+{
+	m_ui->name->setText(QString::fromStdString(m_name));
+}
+
+void DeviceWidget::refreshIcon()
+{
+	m_ui->btn->setIcon(m_icon);
+}
+

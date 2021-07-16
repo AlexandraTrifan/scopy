@@ -71,12 +71,15 @@
 #include <libm2k/digital/m2kdigital.hpp>
 #include "scopyExceptionHandler.h"
 
+#include "core/plugin_manager.hpp"
+
 #define TIMER_TIMEOUT_MS 5000
 #define ALIVE_TIMER_TIMEOUT_MS 5000
 
 using namespace adiscope;
 using namespace libm2k::context;
 using namespace libm2k::digital;
+using namespace scopy::core;
 
 ToolLauncher::ToolLauncher(QString prevCrashDump, QWidget *parent) :
 	QMainWindow(parent),
@@ -111,6 +114,19 @@ ToolLauncher::ToolLauncher(QString prevCrashDump, QWidget *parent) :
 		notifier.setEnabled(false);
 
 	ui->setupUi(this);
+
+	// Visualize all connected uris
+	m_contextEnumerator = new scopy::core::ContextEnumerator();
+	connect(m_contextEnumerator, &scopy::core::ContextEnumerator::printData, this,
+		&adiscope::ToolLauncher::updateListOfDevices);//detectedUris);
+
+	// Setup device manager widget
+	m_deviceManager = new DeviceManager(ui->scrollArea_2);
+	ui->scrollArea_2->setWidget(m_deviceManager);
+//	connect(m_deviceManager, &DeviceManager::requestToolsFromPlugin, this,
+//		&adiscope::ToolLauncher::loadToolsFromPlugin);
+//	connect(m_deviceManager, &DeviceManager::requestConnectionToPlugin, this,
+//		&adiscope::ToolLauncher::connectToPlugin);
 
 	setWindowIcon(QIcon(":/icon.ico"));
 	QApplication::setWindowIcon(QIcon(":/icon.ico"));
@@ -182,10 +198,11 @@ ToolLauncher::ToolLauncher(QString prevCrashDump, QWidget *parent) :
 
 	connect(&notifier, SIGNAL(activated(int)), this, SLOT(hasText()));
 
-	search_timer = new QTimer();
-	connect(search_timer, SIGNAL(timeout()), this, SLOT(search()));
-	connect(&watcher, SIGNAL(finished()), this, SLOT(update()));
-	search_timer->start(TIMER_TIMEOUT_MS);
+//	search_timer = new QTimer();
+//	connect(search_timer, SIGNAL(timeout()), this, SLOT(search()));
+//	connect(&watcher, SIGNAL(finished()), this, SLOT(update()));
+//	search_timer->start(TIMER_TIMEOUT_MS);
+	m_contextEnumerator->start();
 
 	alive_timer = new QTimer();
 	connect(alive_timer, SIGNAL(timeout()), this, SLOT(ping()));
@@ -521,7 +538,7 @@ int ToolLauncher::getDeviceIndex(DeviceWidget *device)
 
 void ToolLauncher::resetSession()
 {
-	QString uri;
+	std::string uri;
 	DeviceWidget *connectedDev = nullptr;
 	if (ctx) {
 		connectedDev = getConnectedDevice();
@@ -576,12 +593,12 @@ void ToolLauncher::runProgram(const QString& program, const QString& fn)
 	qApp->exit(ret);
 }
 
-void ToolLauncher::search()
-{
-	search_timer->stop();
-	future = QtConcurrent::run(this, &ToolLauncher::searchDevices);
-	watcher.setFuture(future);
-}
+//void ToolLauncher::search()
+//{
+//	search_timer->stop();
+//	future = QtConcurrent::run(this, &ToolLauncher::searchDevices);
+//	watcher.setFuture(future);
+//}
 
 QVector<QString> ToolLauncher::searchDevices()
 {
@@ -614,46 +631,59 @@ out_destroy_context:
 	return uris;
 }
 
-void ToolLauncher::updateListOfDevices(const QVector<QString>& uris)
+void ToolLauncher::updateListOfDevices(const std::vector<std::string> &uris)
 {
+	auto currentUris = m_deviceManager->getUris();
+	// Remove all the old uris that are no longer available at scan time
+	for (unsigned int i; i < currentUris.size(); i++) {
+		auto uri = currentUris.at(i);
+		auto it = std::find(uris.begin(), uris.end(), uri);
+		if (it == uris.end()) {
+			currentUris.erase(currentUris.begin() + i);
+			m_deviceManager->removeDeviceWidget(uri);
+//			if (dev->isChecked()) {
+//				if (pos > 0) {
+//					devices.at(pos-1)->click();
+//				} else {
+//					ui->btnHomepage->click();
+//				}
+//			}
+//			delete dev;
+//			devices.erase(devices.begin() + pos);
+//			ui->stackedWidget->removeWidget(dev->infoPage());
+			// device manager should emit a signal to say the info page will be removed
+		}
+	}
+
+	// Add the new uris to our list
+	for (auto uri : uris) {
+		 auto it = std::find(currentUris.begin(), currentUris.end(), uri);
+		 if (it == currentUris.end()) {
+			 addContext(QString::fromStdString(uri));
+//			loadCompatiblePlugins(uri);
+		 }
+	}
+	///////////////////////////////////////////////////////////////////////////////
 	//Delete devices that are in the devices list but not found anymore when scanning
 
-	int pos = 0;
-	while (pos < devices.size()) {
-		auto dev = devices.at(pos);
-		if (dev->connected()) {
-			pos++;
-			continue;
-		}
-		QString uri = dev->uri();
-		if (uri.startsWith("usb:") && !uris.contains(uri)) {
-			ui->stackedWidget->removeWidget(dev->infoPage());
-			devices_btn_group->removeButton(dev->deviceButton());
-			if (dev->isChecked()) {
-				if (pos > 0) {
-					devices.at(pos-1)->click();
-				} else {
-					ui->btnHomepage->click();
-				}
-			}
-			delete dev;
-			devices.erase(devices.begin() + pos);
-		} else {
-			pos++;
-		}
-	}
+//	if (dev->connected()) {
+//		pos++;
+//		continue;
+//	}
 
-	for (const QString& uri : uris) {
-		if (!uri.startsWith("usb:"))
-			continue;
+//	for (const std::string& uri : uris) {
+//		QString quri = QString::fromStdString(uri);
+//		if (!quri.startsWith("usb:"))
+//			continue;
 
-		auto dev = getDevice(uri);
+//		auto dev = getDevice(uri);
 
-		if (!dev)
-			addContext(uri);
-	}
+//		if (!dev)
+//			addContext(quri);
+//	}
 
-	search_timer->start(TIMER_TIMEOUT_MS);
+	m_contextEnumerator->start();
+//	search_timer->start(TIMER_TIMEOUT_MS);
 }
 
 void ToolLauncher::loadToolTips(bool connected){
@@ -670,10 +700,10 @@ void ToolLauncher::loadToolTips(bool connected){
 	}
 }
 
-void ToolLauncher::update()
-{
-	updateListOfDevices(watcher.result());
-}
+//void ToolLauncher::update()
+//{
+//	updateListOfDevices(watcher.result());
+//}
 
 ToolLauncher::~ToolLauncher()
 {
@@ -687,7 +717,7 @@ ToolLauncher::~ToolLauncher()
 
 	devices.clear();
 
-	delete search_timer;
+//	delete search_timer;
 	delete alive_timer;
 
 	delete infoWidget;
@@ -719,7 +749,7 @@ void ToolLauncher::forgetDeviceBtn_clicked(QString uri)
 		return;
 	}
 	int pos = getDeviceIndex(dev);
-	if (dev->uri().startsWith("usb:")) {
+	if (QString::fromStdString(dev->uri()).startsWith("usb:")) {
 		return;
 	}
 
@@ -732,7 +762,7 @@ void ToolLauncher::forgetDeviceBtn_clicked(QString uri)
 		}
 	}
 
-	if (dev->uri() == uri) {
+	if (dev->uri() == uri.toStdString()) {
 		/* Remove device selection and select the
 		 * precedent device (or the add page)
 		 */
@@ -750,9 +780,35 @@ void ToolLauncher::forgetDeviceBtn_clicked(QString uri)
 	}
 }
 
+// LOAD DEVICE BUTTONS
+// request the device info for that plugin, in order to create the device BTN
+void ToolLauncher::loadCompatiblePlugins(std::string uri)
+{
+	auto tempCtx = iio_create_context_from_uri(uri.c_str());
+	if (!tempCtx) {
+		return;
+	}
+
+	libm2k::context::Context *tempFromCtx = contextOpen(tempCtx, uri.c_str());
+	auto iioDevsList = tempFromCtx->getAllDevices();
+
+	auto uri_compat = scopy::core::PluginManager::getInstance().getCompatiblePlugins(iioDevsList);
+	// TODO: check if uri already there
+	// TODO: do not add it if we don't have compatible plugins (but there will always be the genric one
+	// TODO: the generic one should be separated from the other ones
+	// TODO: the pluginmanager should check all the plugins and also add the generic one if none is available
+//	m_uri_compatibility.insert(std::make_pair(uri, uri_compat));
+	DeviceWidget *deviceWidget = new DeviceWidget(uri, uri_compat[0], this);
+	m_deviceManager->addDeviceWidget(deviceWidget);
+	ui->stackedWidget->addWidget((QWidget*)deviceWidget->infoPage());
+	contextClose(tempFromCtx);
+}
 
 QPushButton *ToolLauncher::addContext(const QString& uri)
 {
+	loadCompatiblePlugins(uri.toStdString());
+	return nullptr;
+
 	auto tempCtx = iio_create_context_from_uri(uri.toStdString().c_str());
 	if (!tempCtx)
 		return nullptr;
@@ -762,13 +818,13 @@ QPushButton *ToolLauncher::addContext(const QString& uri)
 		return nullptr;
 
 	DeviceWidget *deviceWidget = nullptr;
-	if (tempFilter->hw_name().compare("M2K") == 0) {
-		deviceWidget = DeviceBuilder::newDevice(DeviceBuilder::M2K,
-					       uri, tempFilter->hw_name(), this);
-	} else {
-		deviceWidget = DeviceBuilder::newDevice(DeviceBuilder::GENERIC,
-					       uri, tempFilter->hw_name(), this);
-	}
+//	if (tempFilter->hw_name().compare("M2K") == 0) {
+//		deviceWidget = DeviceBuilder::newDevice(DeviceBuilder::M2K,
+//					       uri, tempFilter->hw_name(), this);
+//	} else {
+//		deviceWidget = DeviceBuilder::newDevice(DeviceBuilder::GENERIC,
+//					       uri, tempFilter->hw_name(), this);
+//	}
 
 	delete tempFilter;
 	iio_context_destroy(tempCtx);
@@ -790,10 +846,11 @@ QPushButton *ToolLauncher::addContext(const QString& uri)
 	connect(deviceWidget->infoPage(), SIGNAL(stopSearching(bool)),
 		this, SLOT(stopSearching(bool)));
 
-	ui->devicesList->insertWidget(ui->devicesList->count() - 1,
-				deviceWidget);
+	m_deviceManager->addDeviceWidget(deviceWidget);
+//	ui->devicesList->insertWidget(ui->devicesList->count() - 1,
+//				deviceWidget);
 	ui->stackedWidget->addWidget(deviceWidget->infoPage());
-	devices_btn_group->addButton(deviceWidget->deviceButton());
+//	devices_btn_group->addButton(deviceWidget->deviceButton());
 	devices.push_back(deviceWidget);
 
 	return deviceWidget->deviceButton();
@@ -801,11 +858,15 @@ QPushButton *ToolLauncher::addContext(const QString& uri)
 
 void ToolLauncher::stopSearching(bool stop)
 {
-	if (stop){
-		search_timer->stop();
+	if (stop) {
+		m_contextEnumerator->stop();
+//		search_timer->stop();
 	} else {
-		if (!getConnectedDevice())
-			search_timer->start(TIMER_TIMEOUT_MS);
+		if (!getConnectedDevice()) {
+			m_contextEnumerator->start();
+		}
+
+//			search_timer->start(TIMER_TIMEOUT_MS);
 	}
 }
 
@@ -835,7 +896,7 @@ void ToolLauncher::btnAdd_toggled(bool toggled)
 	}
 }
 
-DeviceWidget* ToolLauncher::getDevice(QString uri)
+DeviceWidget* ToolLauncher::getDevice(std::string uri)
 {
 	for (auto dev : devices) {
 		if (dev->uri() == uri) {
@@ -947,7 +1008,7 @@ void ToolLauncher::setupAddPage()
 	connectWidget = new ConnectDialog(ui->stackedWidget);
 	connect(connectWidget, &ConnectDialog::newContext,
 		[=](const QString& uri) {
-		auto dev = getDevice(uri);
+		auto dev = getDevice(uri.toStdString());
 		if (dev) {
 			highlightDevice(dev->deviceButton());
 		} else {
@@ -1075,7 +1136,7 @@ void adiscope::ToolLauncher::deviceBtn_clicked(bool pressed)
 
 	if (pressed && !getConnectedDevice()) {
 		if (dev) {
-			auto tempCtx = iio_create_context_from_uri(dev->uri().toStdString().c_str());
+			auto tempCtx = iio_create_context_from_uri(dev->uri().c_str());
 			if (tempCtx) {
 				auto tempFilter = new Filter(tempCtx);
 				menu->loadToolsFromFilter(tempFilter);
@@ -1124,13 +1185,14 @@ void adiscope::ToolLauncher::disconnect()
 			infoPg->setConnectionStatusLabel("Not connected");
 			infoPg->setCalibrationStatusLabel("");
 		}
-		search_timer->start(TIMER_TIMEOUT_MS);
+//		search_timer->start(TIMER_TIMEOUT_MS);
+		m_contextEnumerator->start();
 		selectedDev->infoPage()->setConnectionStatusLabel("Not connected");
 		selectedDev->infoPage()->setCalibrationStatusLabel("");
 	}
 
 	/* Update the list of devices now */
-	updateListOfDevices(searchDevices());
+//	updateListOfDevices(searchDevices());
 }
 
 void adiscope::ToolLauncher::ping()
@@ -1197,13 +1259,14 @@ void adiscope::ToolLauncher::connectBtn_clicked(bool pressed)
 				google::SetLogDestination(google::GLOG_INFO, "");
 			}
 #endif
-			QString uri = selectedDev->uri();
+			std::string uri = selectedDev->uri();
 			selectedDev->infoPage()->identifyDevice(false);
-			search_timer->stop();
+//			search_timer->stop();
+			m_contextEnumerator->stop();
 			bool success = switchContext(uri);
 			if (success) {
 				selectedDev->setConnected(true, false, ctx);
-				selectedDev->setName(filter->hw_name());
+				selectedDev->setName(filter->hw_name().toStdString());
 				selectedDev->infoPage()->identifyDevice(true);
 				setDynamicProperty(ui->btnConnect, "connected", true);
 
@@ -1589,19 +1652,20 @@ void adiscope::ToolLauncher::enableDacBasedTools()
 	}
 }
 
-bool adiscope::ToolLauncher::switchContext(const QString& uri)
+bool adiscope::ToolLauncher::switchContext(const std::string& uri)
 {
 	destroyContext();
 
-	if (uri.startsWith("ip:")) {
-		previousIp = uri.mid(3);
+	QString quri = QString::fromStdString(uri);
+	if (quri.startsWith("ip:")) {
+		previousIp = quri.mid(3);
 	}
 
 	auto dev = getDevice(uri);
 	if (dev->infoPage()->ctx()) {
 		ctx = dev->infoPage()->ctx();
 	} else {
-		ctx = iio_create_context_from_uri(uri.toStdString().c_str());
+		ctx = iio_create_context_from_uri(uri.c_str());
 	}
 
 	if (!ctx) {
@@ -1628,7 +1692,8 @@ bool adiscope::ToolLauncher::switchContext(const QString& uri)
 				|| filter->compatible(TOOL_PATTERN_GENERATOR)) {
 
 			if (!m_use_decoders) {
-				search_timer->stop();
+//				search_timer->stop();
+				m_contextEnumerator->stop();
 
 				QMessageBox info(this);
 				info.setText(tr("Digital decoders support is disabled. Some features may be missing"));
@@ -1638,7 +1703,8 @@ bool adiscope::ToolLauncher::switchContext(const QString& uri)
 							    "/decoders");
 
 				if (!success) {
-					search_timer->stop();
+//					search_timer->stop();
+					m_contextEnumerator->stop();
 
 					QMessageBox error(this);
 					error.setText(tr("There was a problem initializing libsigrokdecode. Some features may be missing"));
@@ -1795,7 +1861,7 @@ void ToolLauncher::checkIp(const QString& ip)
 
 		bool found = false;
 		for (auto dev : devices) {
-			if (dev->uri() == uri) {
+			if (dev->uri() == uri.toStdString()) {
 				found = true;
 				break;
 			}

@@ -17,7 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9.6)
 project(scopy LANGUAGES CXX VERSION 1.3.0)
 
 set(Python_ADDITIONAL_VERSIONS 3)
@@ -229,8 +229,12 @@ FILE(GLOB SRC_LIST  src/*.cpp src/*.cc
 	src/patterngenerator/*/*.cpp
 	src/logicanalyzer/*.cpp
 	src/logicanalyzer/*/*.cpp
+	src/core/*.cpp
+	#src/plugins/demo/*.cpp
+	#src/plugins/m2k/*.cpp
 )
 
+add_subdirectory(src/plugins)
 FILE(GLOB M2KSCOPE_UIS ui/patterns/*.ui ui/*.ui)
 qt5_wrap_ui (m2kscope_FORMS_HEADERS ${M2KSCOPE_UIS})
 

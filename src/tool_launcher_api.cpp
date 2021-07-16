@@ -109,7 +109,7 @@ bool ToolLauncher_API::connect(const QString& uri)
 
 	DeviceWidget* dev = nullptr;
 	for (auto d : tl->devices) {
-		if (d->uri() == uri) {
+		if (d->uri() == uri.toStdString()) {
 			dev = d;
 			break;
 		}
@@ -122,7 +122,7 @@ bool ToolLauncher_API::connect(const QString& uri)
 			return false;
 		}
 		for (auto d : tl->devices) {
-			if (d->uri() == uri) {
+			if (d->uri() == uri.toStdString()) {
 				dev = d;
 				break;
 			}

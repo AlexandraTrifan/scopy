@@ -57,6 +57,9 @@
 #include "toolmenu.h"
 #include "session_info.h"
 
+#include "core/context_enumerator.hpp"
+#include "core/device_manager.hpp"
+
 extern "C" {
 	struct iio_context;
 }
@@ -97,7 +100,6 @@ public:
 	void setNativeDialogs(bool nativeDialogs);
 
 	PhoneHome *getPhoneHome() const;
-
 Q_SIGNALS:
 	void connectionDone(bool success);
 	void adcCalibrationDone();
@@ -121,8 +123,8 @@ public Q_SLOTS:
 	void toolDetached(bool detached);
 
 private Q_SLOTS:
-	void search();
-	void update();
+//	void search();
+//	void update();
 	void ping();
 
 	void btnOscilloscope_clicked();
@@ -169,7 +171,7 @@ private:
 	void swapMenu(QWidget *menu);
 	void destroyContext();
 	bool loadDecoders(QString path);
-	bool switchContext(const QString& uri);
+	bool switchContext(const std::string& uri);
 	void resetStylesheets();
 	QPair<bool, bool> initialCalibration();
 	QPair<bool, bool> calibrate();
@@ -178,7 +180,6 @@ private:
 	void saveSettings();
 	Q_INVOKABLE QPushButton *addContext(const QString& hostname);
 
-	void updateListOfDevices(const QVector<QString>& uris);
 	QStringList tools;
 	QStringList toolIcons;
 	void closeEvent(QCloseEvent *event);
@@ -187,7 +188,7 @@ private:
 	void updateHomepage();
 	void readPreferences();
 	void loadIndexPageFromContent(QString fileLocation);
-	DeviceWidget* getDevice(QString uri);
+	DeviceWidget* getDevice(std::string uri);
 	void setupAddPage();
 	void allowExternalScript(bool);
 
@@ -277,6 +278,17 @@ private:
 	PhoneHome* m_phoneHome;
 
 	SessionInfo m_sessionInfo;
+
+/** >> scopy 2.0 << **/
+private:
+	scopy::core::ContextEnumerator* m_contextEnumerator;
+	scopy::core::DeviceManager* m_deviceManager;
+
+	void loadCompatiblePlugins(std::string uri);
+
+private Q_SLOTS:
+	void updateListOfDevices(const std::vector<std::string> &);
+
 };
 }
 #endif // M2K_TOOL_LAUNCHER_H
